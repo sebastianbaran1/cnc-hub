@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MaterialCategory {
+  METAL
+  WOOD
+  PLASTICS
+}
+
+enum ProductionScale {
+  PROTOTYPE
+  SMALL_BATCH
+  MASS_PRODUCTION
+  LONG_TERM
+}
+
+enum Urgency {
+  URGENT
+  UP_TO_1_WEEK
+  UP_TO_2_WEEKS
+  FLEXIBLE
+}
+
+enum ClientType {
+  COMPANY
+  PRIVATE
+}
+
+enum DeliveryMethod {
+  SHIPPING
+  LOCAL
+  BOTH
+}
+
+model Listing {
+  id String @id @default(uuid(7))
+
+  title            String
+  description      String
+  materialCategory MaterialCategory
+  productionScale  ProductionScale
+  urgency          Urgency
+  clientType       ClientType
+  deliveryMethod   DeliveryMethod
+  postalCode       String
+  phone            String
+  email            String
+  createdAt        DateTime         @default(now())
+}
