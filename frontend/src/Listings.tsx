@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { Listing } from "../../backend/src/generated/prisma/client.js";
 import { useEffect, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 type FetchListingsResponse = { nextCursor: string | null; listings: Listing[] };
 type ListingComponentType = {
@@ -62,11 +63,18 @@ export default function Listings() {
   });
 
   const allListings = data?.pages.flatMap((page) => page.listings) ?? [];
-
   const everyRef = useRef<(HTMLDivElement | null)[]>([]);
   const seenListings = useRef<Element[]>([]);
-
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const [isScrollTop, setIsScrollTop] = useState(false);
+
+  const virtualizer = useVirtualizer({
+    count: allListings.length,
+    estimateSize: () => 270,
+    getScrollElement: () => scrollRef.current,
+  });
+
+  const virtualizedItems = virtualizer.getVirtualItems();
 
   useEffect(() => {
     if (!hasNextPage || isFetchingNextPage) return;
@@ -76,7 +84,7 @@ export default function Listings() {
         if (entries[0].isIntersecting) fetchNextPage();
       },
       {
-        rootMargin: "300px",
+        root: scrollRef.current,
       },
     );
 
@@ -84,34 +92,24 @@ export default function Listings() {
       observer.observe(everyRef.current[allListings.length - 1]!);
     }
     return () => observer.disconnect();
-  }, [allListings.length, hasNextPage, isFetchingNextPage]);
+  }, [virtualizedItems, allListings.length, hasNextPage, isFetchingNextPage]);
+
+  useEffect(() => {
+    setIsScrollTop(!everyRef.current[0]);
+  }, [virtualizedItems]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        setIsScrollTop(!entries[0].isIntersecting);
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            seenListings.current.push(entry.target);
+            observer.unobserve(entry.target);
+          }
+        });
       },
-      {
-        rootMargin: "300px",
-      },
+      { root: scrollRef.current },
     );
-
-    if (everyRef.current[0]) {
-      observer.observe(everyRef.current[0]);
-    }
-    return () => observer.disconnect();
-  }, [allListings.length]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          console.log(entry.target.textContent);
-          seenListings.current.push(entry.target);
-          observer.unobserve(entry.target);
-        }
-      });
-    });
 
     everyRef.current.forEach((listing) => {
       if (listing && !seenListings.current.includes(listing))
@@ -133,41 +131,66 @@ export default function Listings() {
             top: "100px",
             right: "100px",
             padding: "10px",
+            zIndex: "2",
           }}
           type="button"
-          onClick={() =>
-            window.scrollTo({
+          onClick={() => {
+            scrollRef.current?.scrollTo({
               top: 0,
               behavior: "smooth",
-            })
-          }
+            });
+          }}
         >
           Idź na góre
         </button>
       )}
-      {allListings.map((listing, index) => {
-        return (
-          <ListingComponent
-            key={listing.id}
-            listing={listing}
-            uniqueRef={(el) => {
-              everyRef.current[index] = el;
-            }}
-          />
-        );
-      })}
-      {isFetchingNextPage && (
+
+      <div
+        ref={scrollRef}
+        style={{ height: "70vh", overflow: "auto", margin: "100px 0 0 0 " }}
+      >
         <div
           style={{
-            border: "1px solid black",
-            margin: "10px",
-            padding: "10px",
-            height: "230px",
+            position: "relative",
+            height: `${virtualizer.getTotalSize()}px`,
           }}
         >
-          Wczytywanie kolejnych ogłoszeń...
+          {virtualizedItems.map((vItem) => {
+            const listing = allListings[vItem.index];
+            return (
+              <div
+                style={{
+                  position: "absolute",
+                  transform: `translateY(${vItem.start}px)`,
+                  height: `${vItem.size}px`,
+                }}
+                key={vItem.key}
+                data-index={vItem.index}
+              >
+                <ListingComponent
+                  key={listing.id}
+                  listing={listing}
+                  uniqueRef={(el) => {
+                    everyRef.current[vItem.index] = el;
+                  }}
+                />
+              </div>
+            );
+          })}
         </div>
-      )}
+        {isFetchingNextPage && (
+          <div
+            style={{
+              border: "1px solid black",
+              margin: "10px",
+              padding: "10px",
+              height: "230px",
+            }}
+          >
+            Wczytywanie kolejnych ogłoszeń...
+          </div>
+        )}
+      </div>
     </>
   );
 }
