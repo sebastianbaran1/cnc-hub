@@ -18,14 +18,21 @@ async function fetchListings({
     `http://localhost:3000/api/listings?cursor=${pageParam}`,
   );
   if (!response.ok) {
-    throw new Error("Nie udało się pobrać ogłoszeń");
+    const data: { error: string } = await response.json();
+    throw new Error(data.error);
   }
 
   await new Promise((resolve) => setTimeout(resolve, 1000));
+
   return response.json();
 }
 
 function ListingComponent({ listing, uniqueRef }: ListingComponentType) {
+  const [isClicked, setIsClicked] = useState(false);
+  const toggle = () => {
+    setIsClicked((prev) => !prev);
+  };
+
   return (
     <div
       ref={uniqueRef}
@@ -33,8 +40,9 @@ function ListingComponent({ listing, uniqueRef }: ListingComponentType) {
         border: "1px solid black",
         margin: "10px",
         padding: "10px",
-        height: "230px",
+        height: !isClicked ? "230px" : "480px",
       }}
+      onClick={toggle}
     >
       <p>{listing.id}</p>
       <p>{listing.title}</p>
@@ -155,28 +163,31 @@ export default function Listings() {
             height: `${virtualizer.getTotalSize()}px`,
           }}
         >
-          {virtualizedItems.map((vItem) => {
-            const listing = allListings[vItem.index];
-            return (
-              <div
-                style={{
-                  position: "absolute",
-                  transform: `translateY(${vItem.start}px)`,
-                  height: `${vItem.size}px`,
-                }}
-                key={vItem.key}
-                data-index={vItem.index}
-              >
-                <ListingComponent
-                  key={listing.id}
-                  listing={listing}
-                  uniqueRef={(el) => {
-                    everyRef.current[vItem.index] = el;
-                  }}
-                />
-              </div>
-            );
-          })}
+          <div
+            style={{
+              position: "absolute",
+              transform: `translateY(${virtualizedItems[0]?.start ?? 0}px)`,
+            }}
+          >
+            {virtualizedItems.map((vItem) => {
+              const listing = allListings[vItem.index];
+              return (
+                <div
+                  key={vItem.key}
+                  data-index={vItem.index}
+                  ref={virtualizer.measureElement}
+                >
+                  <ListingComponent
+                    key={listing.id}
+                    listing={listing}
+                    uniqueRef={(el) => {
+                      everyRef.current[vItem.index] = el;
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
         {isFetchingNextPage && (
           <div
