@@ -22,7 +22,7 @@ async function fetchListings({
     throw new Error(data.error);
   }
 
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 2000));
 
   return response.json();
 }
@@ -36,6 +36,7 @@ function ListingComponent({ listing, uniqueRef }: ListingComponentType) {
   return (
     <div
       ref={uniqueRef}
+      data-id={listing.id}
       style={{
         border: "1px solid black",
         margin: "10px",
@@ -72,7 +73,7 @@ export default function Listings() {
 
   const allListings = data?.pages.flatMap((page) => page.listings) ?? [];
   const everyRef = useRef<(HTMLDivElement | null)[]>([]);
-  const seenListings = useRef<Element[]>([]);
+  const seenListings = useRef<string[]>([]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [isScrollTop, setIsScrollTop] = useState(false);
 
@@ -111,8 +112,9 @@ export default function Listings() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            seenListings.current.push(entry.target);
+            seenListings.current.push(entry.target.getAttribute("data-id")!);
             observer.unobserve(entry.target);
+            console.log(seenListings);
           }
         });
       },
@@ -120,12 +122,15 @@ export default function Listings() {
     );
 
     everyRef.current.forEach((listing) => {
-      if (listing && !seenListings.current.includes(listing))
+      if (
+        listing &&
+        !seenListings.current.includes(listing.getAttribute("data-id")!)
+      )
         observer.observe(listing);
     });
 
     return () => observer.disconnect();
-  }, [allListings.length]);
+  }, [allListings.length, virtualizedItems]);
 
   if (isLoading) return <p>Ładowanie ogłoszeń...</p>;
   if (isError) return <p>Wystąpił błąd: {error.message}</p>;
@@ -155,7 +160,13 @@ export default function Listings() {
 
       <div
         ref={scrollRef}
-        style={{ height: "70vh", overflow: "auto", margin: "100px 0 0 0 " }}
+        style={{
+          height: "70vh",
+          width: "90vw",
+          overflow: "auto",
+          margin: "100px 0 0 0 ",
+          border: "2px solid green",
+        }}
       >
         <div
           style={{
@@ -167,6 +178,7 @@ export default function Listings() {
             style={{
               position: "absolute",
               transform: `translateY(${virtualizedItems[0]?.start ?? 0}px)`,
+              width: "100%",
             }}
           >
             {virtualizedItems.map((vItem) => {
@@ -193,9 +205,10 @@ export default function Listings() {
           <div
             style={{
               border: "1px solid black",
-              margin: "10px",
+              margin: "50px 0 0 0",
               padding: "10px",
               height: "230px",
+              width: "80vw",
             }}
           >
             Wczytywanie kolejnych ogłoszeń...

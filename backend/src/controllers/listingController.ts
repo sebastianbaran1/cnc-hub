@@ -25,6 +25,7 @@ export const getListings = async (
 
     res.json({ nextCursor, listings });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Błąd podczas pobierania danych" });
   }
 };
