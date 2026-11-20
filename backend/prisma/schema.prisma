@@ -58,3 +58,22 @@ model Listing {
   email            String
   createdAt        DateTime         @default(now())
 }
+
+model Company {
+  id String @id @default(uuid(7))
+
+  name          String
+  alertSettings AlertSettings?
+}
+
+model AlertSettings {
+  id        String  @id @default(uuid(7))
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id])
+
+  materialCategories MaterialCategory[]
+  productionScales   ProductionScale[]
+  urgencies          Urgency[]
+  clientTypes        ClientType[]
+  deliveryMethods    DeliveryMethod[]
+}

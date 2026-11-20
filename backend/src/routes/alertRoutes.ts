@@ -1,8 +1,12 @@
 import express from "express";
-import { getCategories } from "../controllers/alertController.js";
+import {
+  getCategories,
+  updateCategories,
+} from "../controllers/alertController.js";
 
 const router = express.Router();
 
 router.get("/", getCategories);
+router.put("/", updateCategories);
 
 export default router;
