@@ -1,6 +1,7 @@
 import App from "./App.tsx";
 import Listings from "./Listings.tsx";
 import Alert from "./Alert.tsx";
+import Listing from "./Listing.tsx";
 const routes = [
   {
     path: "/",
@@ -11,6 +12,7 @@ const routes = [
         element: <Listings />,
       },
       { path: "/alert", element: <Alert /> },
+      { path: "/listing", element: <Listing /> },
     ],
   },
 ];
